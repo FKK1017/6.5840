@@ -1,7 +1,6 @@
 package mr
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -109,7 +108,7 @@ func (c *Coordinator) Timer(work string, index int) error {
 	if work == "Map" {
 		select {
 		case <-c.MapJobs.chans[index]:
-			fmt.Println(index)
+			// fmt.Println(index)
 			c.Lock()
 			c.MapJobs.Jobs[index] = 2
 			for _, stat := range c.MapJobs.Jobs {
@@ -121,7 +120,7 @@ func (c *Coordinator) Timer(work string, index int) error {
 			c.MapDone = true
 			c.Unlock()
 		case <-time.After(10 * time.Second):
-			fmt.Println("Over")
+			// fmt.Println("Over")
 			c.Lock()
 			c.MapJobs.Jobs[index] = 0
 			c.Unlock()
@@ -129,7 +128,7 @@ func (c *Coordinator) Timer(work string, index int) error {
 	} else if work == "Reduce" {
 		select {
 		case <-c.ReduceJobs.chans[index]:
-			fmt.Println(index)
+			// fmt.Println(index)
 			c.Lock()
 			c.ReduceJobs.Jobs[index] = 2
 			for _, stat := range c.ReduceJobs.Jobs {

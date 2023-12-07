@@ -52,7 +52,7 @@ func Worker(mapf func(string, string) []KeyValue,
 
 		if ok {
 			if reply_type.WorkType == "Map" {
-				fmt.Printf("Map: %v.\n", reply_type.Filename)
+				// fmt.Printf("Map: %v.\n", reply_type.Filename)
 				Mapper(&reply_type, mapf)
 				finish := Finished{
 					WorkType: "Map",
