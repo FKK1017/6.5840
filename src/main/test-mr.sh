@@ -5,7 +5,7 @@
 #
 
 # un-comment this to run the tests with the Go race detector.
-# RACE=-race
+RACE=-race
 
 if [[ "$OSTYPE" = "darwin"* ]]
 then
@@ -112,6 +112,8 @@ fi
 
 # wait for remaining workers and coordinator to exit.
 wait
+
+# exit 1
 
 #########################################################
 # now indexer
