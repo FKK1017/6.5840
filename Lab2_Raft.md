@@ -21,6 +21,12 @@ Raft Server存在三个状态：
    1. `Follower`: 如果严格大于，为其投票，如果等于，则先到先得
    2. `Candidate`: 如果严格大于，为其投票，并转换为`Follower`
    3. `Leader`: 如果严格大于，为其投票，并转换为`Follower`
+5. 选出来之后，`Leader`定期发心跳包
 
 
 ##
+
+
+t 0 1 2
+8 1 1 ?
+9 0   0
