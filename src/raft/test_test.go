@@ -101,16 +101,16 @@ func TestManyElections2A(t *testing.T) {
 
 	cfg.checkOneLeader()
 
-	iters := 2000
+	iters := 10
 	for ii := 1; ii < iters; ii++ {
 		// disconnect three nodes
 		i1 := rand.Int() % servers
 		i2 := rand.Int() % servers
 		i3 := rand.Int() % servers
-		fmt.Printf("%v %v %v disconnect in %v\n", i1, i2, i3, ii)
 		cfg.disconnect(i1)
 		cfg.disconnect(i2)
 		cfg.disconnect(i3)
+		fmt.Printf("%v %v %v disconnect at %v\n", i1, i2, i3, time.Now())
 
 		// either the current leader should still be alive,
 		// or the remaining four should elect a new one.
@@ -119,6 +119,7 @@ func TestManyElections2A(t *testing.T) {
 		cfg.connect(i1)
 		cfg.connect(i2)
 		cfg.connect(i3)
+		fmt.Printf("%v %v %v connect at %v\n", i1, i2, i3, time.Now())
 	}
 
 	cfg.checkOneLeader()

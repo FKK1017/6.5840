@@ -20,7 +20,6 @@ package raft
 import (
 	//	"bytes"
 
-	"fmt"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -67,6 +66,7 @@ type Raft struct {
 	votedFor     int
 	currentState RaftState
 	votes        int
+	leaderchan   chan int
 }
 
 type RaftState int
@@ -166,6 +166,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	} else {
 		if args.Term > rf.currentTerm {
 			rf.currentState = followerState
+			// fmt.Printf("%v become follower in RequestVote at %v\n", rf.me, time.Now())
 			rf.currentTerm = args.Term
 			rf.votes = 0
 			rf.votedFor = -1
@@ -173,7 +174,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		if rf.votedFor == -1 || rf.votedFor == args.CandidateId {
 			rf.votedFor = args.CandidateId
 			reply.VoteGranted = true
-			rf.lastTime = time.Now().Add(time.Duration(210+rand.Int63()%210) * time.Millisecond)
+			rf.lastTime = time.Now().Add(time.Duration(200+rand.Int()%250) * time.Millisecond)
 			// fmt.Printf("%v vote to %v in term %v at %v\n", rf.me, args.CandidateId, args.Term, time.Now())
 		} else {
 			reply.VoteGranted = false
@@ -214,12 +215,16 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 	ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
-	if reply.VoteGranted {
+	if rf.currentState == candidateState && reply.VoteGranted {
 		rf.votes++
 		if rf.currentState == candidateState && (rf.votes*2 > (len(rf.peers))) {
 			rf.currentState = LeaderState
-			fmt.Printf("%v become leader with term %v at %v\n", rf.me, rf.currentTerm, time.Now())
+			rf.leaderchan <- 1
+			// fmt.Printf("%v become leader with term %v at %v\n", rf.me, rf.currentTerm, time.Now())
 		}
+	} else if ok && reply.Term == 0 {
+		rf.currentState = followerState
+		// fmt.Printf("%v become follower in sendRequestVote at %v\n", rf.me, time.Now())
 	}
 	return ok
 }
@@ -288,7 +293,13 @@ func (rf *Raft) ticker() {
 
 func (rf *Raft) becomeLeader() {
 	for !rf.killed() {
-		time.Sleep(time.Duration(heartbeatTime) * time.Millisecond)
+		// time.Sleep(time.Duration(heartbeatTime) * time.Millisecond)
+		// fmt.Printf("%v check leader at %v\n", rf.me, time.Now())
+		select {
+		case <-time.After(time.Duration(heartbeatTime) * time.Millisecond):
+		case <-rf.leaderchan:
+			// rf.currentState = LeaderState
+		}
 		rf.mu.Lock()
 		if rf.currentState == LeaderState {
 			for i := range rf.peers {
@@ -312,9 +323,10 @@ func (rf *Raft) becomeCandidate() {
 	defer rf.mu.Unlock()
 	rf.currentState = candidateState
 	rf.currentTerm++
+	// fmt.Printf("%v become candidate in term %v at %v\n", rf.me, rf.currentTerm, time.Now())
 	rf.votedFor = rf.me
 	rf.votes = 1
-	rf.lastTime = time.Now().Add(time.Duration(210+rand.Int63()%210) * time.Millisecond)
+	rf.lastTime = time.Now().Add(time.Duration(200+rand.Int()%250) * time.Millisecond)
 
 	for i := range rf.peers {
 		if i == rf.me {
@@ -347,13 +359,15 @@ type AppendEntriesReply struct {
 }
 
 func (rf *Raft) sendHeartBeat(server int, args *AppendEntriesArgs, reply *AppendEntriesReply) bool {
+	// fmt.Printf("%v send heartbeat to %v in term %v at %v\n", rf.me, server, args.Term, time.Now())
 	ok := rf.peers[server].Call("Raft.AppendEntries", args, reply)
-	if !ok || !reply.Success {
+	if ok && !reply.Success {
 		rf.mu.Lock()
 		defer rf.mu.Unlock()
 		rf.currentState = followerState
-		// fmt.Println("Error")
-		// rf.lastTime = time.Now().Add(time.Duration(200 + rand.Int63()%150))
+		// fmt.Printf("%v become follower in sendHeartBeat at %v\n", rf.me, time.Now())
+		// fmt.Printf("%v has bigger term than %v: %v > %v\n", server, args.LeaderId, reply.Term, args.Term)
+		rf.lastTime = time.Now().Add(time.Duration(200+rand.Int()%250) * time.Millisecond)
 	}
 	return ok
 }
@@ -361,15 +375,18 @@ func (rf *Raft) sendHeartBeat(server int, args *AppendEntriesArgs, reply *Append
 func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply) {
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
-	rf.lastTime = time.Now().Add(time.Duration(250+rand.Int63()%100) * time.Millisecond)
-	// fmt.Printf("%v get heartbeat from %v\n", rf.me, args.LeaderId)
+
+	// fmt.Printf("%v get heartbeat from %v in term %v at %v\n", rf.me, args.LeaderId, args.Term, time.Now())
 	if args.Term < rf.currentTerm {
 		// fmt.Printf("%v has bigger term than %v: %v > %v\n", rf.me, args.LeaderId, rf.currentTerm, args.Term)
 		reply.Success = false
 	} else {
+		rf.lastTime = time.Now().Add(time.Duration(200+rand.Int()%250) * time.Millisecond)
+		// fmt.Printf("%v next timeout is %v\n", rf.me, rf.lastTime)
 		reply.Success = true
 		rf.currentTerm = args.Term
 		rf.currentState = followerState
+		// fmt.Printf("%v become follower in AppendEntries at %v\n", rf.me, time.Now())
 		rf.votedFor = args.LeaderId
 		reply.Term = rf.currentTerm
 	}
@@ -396,10 +413,12 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.currentTerm = 0
 	rf.votedFor = -1
 	rf.votes = 0
-	rf.lastTime = time.Now().Add(time.Duration(210+rand.Int63()%210) * time.Millisecond)
+	rf.leaderchan = make(chan int, 1)
 
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
+	rf.lastTime = time.Now().Add(time.Duration(200+rand.Int()%250) * time.Millisecond)
+	// fmt.Printf("%v first timeout is %v\n", rf.me, rf.lastTime)
 
 	// start ticker goroutine to start elections
 	go rf.ticker()
