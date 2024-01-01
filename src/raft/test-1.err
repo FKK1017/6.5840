@@ -1,0 +1,7 @@
+panic: runtime error: index out of range [-1]
+
+goroutine 1534 [running]:
+6.5840/raft.(*Raft).newCommand(0xc00034c380, 0x1)
+	/home/He_kk/6.5840/src/raft/raft.go:305 +0x2f0
+created by 6.5840/raft.(*Raft).Start.func1 in goroutine 1558
+	/home/He_kk/6.5840/src/raft/raft.go:285 +0x21b

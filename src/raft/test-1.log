@@ -1,0 +1,24 @@
+=== RUN   TestBasicAgree2B
+Test (2B): basic agreement ...
+1 become leader with term 1 at 2023-12-15 22:16:12.493415883 +0800 CST m=+0.302312636
+  ... Passed --   1.2  3   28    7300    3
+--- PASS: TestBasicAgree2B (1.23s)
+=== RUN   TestRPCBytes2B
+Test (2B): RPC byte count ...
+2 become leader with term 1 at 2023-12-15 22:16:13.719569697 +0800 CST m=+1.528466443
+  ... Passed --   3.6  3   92  124720   11
+--- PASS: TestRPCBytes2B (3.64s)
+=== RUN   TestFollowerFailure2B
+Test (2B): test progressive failure of followers ...
+2 become leader with term 1 at 2023-12-15 22:16:17.362982209 +0800 CST m=+5.171878959
+  ... Passed --   5.2  3  140   27872    3
+--- PASS: TestFollowerFailure2B (5.21s)
+=== RUN   TestLeaderFailure2B
+Test (2B): test failure of leaders ...
+0 become leader with term 2 at 2023-12-15 22:16:23.076755574 +0800 CST m=+10.885652326
+1 become leader with term 4 at 2023-12-15 22:16:24.585453348 +0800 CST m=+12.394350097
+  ... Passed --   6.4  3  230   47748    3
+--- PASS: TestLeaderFailure2B (6.44s)
+=== RUN   TestFailAgree2B
+Test (2B): agreement after follower reconnects ...
+0 become leader with term 1 at 2023-12-15 22:16:29.0097927 +0800 CST m=+16.818689452
